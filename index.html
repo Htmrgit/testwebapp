@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sunset Diner | Smart UPI Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@600;800&family=Inter:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fff7ed; }
+        .heading { font-family: 'Kanit', sans-serif; }
+        .cart-sidebar { transition: transform 0.4s ease; transform: translateX(100%); }
+        .cart-sidebar.open { transform: translateX(0); }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #312e81; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Simple Navbar -->
+    <nav class="fixed top-0 w-full z-50 bg-indigo-900 text-white p-4 shadow-lg flex justify-between items-center">
+        <h1 class="text-xl font-black italic">SUNSET<span class="text-amber-400">DINER</span></h1>
+        <button onclick="toggleCart()" class="bg-amber-500 text-indigo-900 px-4 py-2 rounded-full font-bold relative">
+            <i class="fas fa-shopping-cart"></i>
+            <span id="cart-count" class="absolute -top-2 -right-2 bg-white text-indigo-900 text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-24 px-4 max-w-4xl mx-auto">
+        <div id="menu-container" class="grid gap-6 sm:grid-cols-2">
+            <!-- Mock Items for testing -->
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg">Paneer Tikka Pizza</h3>
+                <p class="text-gray-500 text-sm">Delicious indian fusion pizza.</p>
+                <div class="flex justify-between items-center mt-4">
+                    <span class="font-black text-xl">₹299</span>
+                    <button onclick="addToCart('Paneer Pizza', 299)" class="bg-indigo-900 text-white px-6 py-2 rounded-xl text-xs font-bold uppercase">Add to Cart</button>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg">Classic Burger Combo</h3>
+                <p class="text-gray-500 text-sm">Burger with fries and coke.</p>
+                <div class="flex justify-between items-center mt-4">
+                    <span class="font-black text-xl">₹199</span>
+                    <button onclick="addToCart('Burger Combo', 199)" class="bg-indigo-900 text-white px-6 py-2 rounded-xl text-xs font-bold uppercase">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-overlay" onclick="toggleCart()" class="fixed inset-0 bg-black/40 z-[60] hidden backdrop-blur-sm"></div>
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full sm:w-96 z-[70] bg-white cart-sidebar shadow-2xl flex flex-col p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-black heading uppercase">Your <span class="text-amber-500">Basket</span></h2>
+            <button onclick="toggleCart()" class="text-2xl">&times;</button>
+        </div>
+
+        <div id="cart-items" class="flex-grow overflow-y-auto space-y-4 mb-6">
+            <p class="text-center text-gray-400 py-10">Cart is empty</p>
+        </div>
+
+        <!-- Order Form -->
+        <div id="order-form" class="space-y-3 mb-6 hidden">
+            <input type="text" id="cust-name" placeholder="Apna Naam Likhein" class="w-full p-3 bg-gray-100 rounded-xl outline-none focus:ring-2 ring-indigo-500 text-sm font-bold">
+            <input type="tel" id="cust-phone" placeholder="Mobile Number" class="w-full p-3 bg-gray-100 rounded-xl outline-none focus:ring-2 ring-indigo-500 text-sm font-bold">
+            <textarea id="cust-addr" placeholder="Pura Address (House No, Area)" class="w-full p-3 bg-gray-100 rounded-xl outline-none focus:ring-2 ring-indigo-500 text-sm font-bold h-20"></textarea>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="border-t pt-6 space-y-4">
+            <div class="flex justify-between font-black text-xl">
+                <span>Total:</span>
+                <span id="total-price">₹0</span>
+            </div>
+
+            <!-- STEP 1: Pay Button -->
+            <button id="pay-btn" onclick="openUPIApps()" class="w-full bg-indigo-900 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-widest hidden flex items-center justify-center gap-3">
+                <i class="fas fa-mobile-alt"></i> Pay via UPI App
+            </button>
+
+            <!-- STEP 2: Transaction ID Entry (Hidden initially) -->
+            <div id="txn-entry" class="hidden animate-bounce bg-amber-50 p-4 rounded-2xl border-2 border-dashed border-amber-300 space-y-3">
+                <p class="text-[10px] font-bold text-center uppercase text-amber-700">Payment ke baad Transaction ID yahan bharein:</p>
+                <input type="text" id="txn-id" placeholder="12 Digit Transaction ID" class="w-full p-3 rounded-xl border-none text-center font-black tracking-widest text-sm uppercase">
+                <button id="confirm-btn" onclick="submitFinalOrder()" class="w-full bg-green-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest">
+                    Place Order Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SETTINGS ---
+        const MY_UPI_ID = "YOUR_UPI_ID_HERE"; // Apni UPI ID yahan dalein (e.g. 9876543210@okaxis)
+        const STORE_NAME = "Sunset Diner";
+        const APPS_SCRIPT_URL = "YOUR_SCRIPT_URL_HERE"; // Apps script deployment URL
+        const WHATSAPP_NUMBER = "919355650312";
+
+        let cart = [];
+        let totalAmount = 0;
+
+        function toggleCart() {
+            document.getElementById('cart-sidebar').classList.toggle('open');
+            document.getElementById('cart-overlay').classList.toggle('hidden');
+        }
+
+        function addToCart(name, price) {
+            cart.push({name, price});
+            updateUI();
+        }
+
+        function updateUI() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('total-price');
+            const countEl = document.getElementById('cart-count');
+            const payBtn = document.getElementById('pay-btn');
+            const form = document.getElementById('order-form');
+
+            if(cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-10">Cart is empty</p>';
+                totalEl.innerText = "₹0";
+                countEl.classList.add('hidden');
+                payBtn.classList.add('hidden');
+                form.classList.add('hidden');
+                return;
+            }
+
+            totalAmount = cart.reduce((acc, item) => acc + item.price, 0);
+            container.innerHTML = cart.map((item, i) => `
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                    <span class="font-bold text-sm">${item.name}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-black">₹${item.price}</span>
+                        <button onclick="removeItem(${i})" class="text-red-500 text-xs"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            totalEl.innerText = `₹${totalAmount}`;
+            countEl.innerText = cart.length;
+            countEl.classList.remove('hidden');
+            payBtn.classList.remove('hidden');
+            form.classList.remove('hidden');
+        }
+
+        function removeItem(i) {
+            cart.splice(i, 1);
+            updateUI();
+        }
+
+        // STEP 1: OPEN UPI APPS SELECTOR
+        function openUPIApps() {
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const addr = document.getElementById('cust-addr').value;
+
+            if(!name || !phone || !addr) {
+                alert("Pehle Delivery Details sahi se bharein!");
+                return;
+            }
+
+            // UPI Intent Link
+            // Mobile OS recognizes 'upi://pay' and shows GPay/PhonePe/Paytm automatically
+            const upiLink = `upi://pay?pa=${MY_UPI_ID}&pn=${encodeURIComponent(STORE_NAME)}&am=${totalAmount}&cu=INR&tn=OrderFromSunsetDiner`;
+
+            // Redirect to UPI apps
+            window.location.href = upiLink;
+
+            // Show Transaction ID input field after click
+            document.getElementById('pay-btn').classList.add('hidden');
+            document.getElementById('txn-entry').classList.remove('hidden');
+        }
+
+        // STEP 2: SUBMIT DATA TO GOOGLE SHEETS
+        async function submitFinalOrder() {
+            const txnId = document.getElementById('txn-id').value.trim();
+            const confirmBtn = document.getElementById('confirm-btn');
+
+            if(txnId.length < 10) {
+                alert("Please enter a valid Transaction ID!");
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="loader"></span> Placing Order...';
+
+            const payload = {
+                date: new Date().toLocaleString(),
+                amount: totalAmount,
+                txnId: txnId,
+                name: document.getElementById('cust-name').value,
+                phone: document.getElementById('cust-phone').value,
+                address: document.getElementById('cust-addr').value,
+                items: JSON.stringify(cart),
+                status: "Pending Verification"
+            };
+
+            try {
+                // Sending to Google Apps Script
+                await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    body: JSON.stringify(payload)
+                });
+
+                // SUCCESS MESSAGE & WHATSAPP REDIRECT
+                const waText = encodeURIComponent(`🔥 *ORDER PLACED - SUCCESSFUL*\n\n💰 *Amount:* ₹${payload.amount}\n🆔 *Txn ID:* ${txnId}\n👤 *Name:* ${payload.name}\n🏠 *Address:* ${payload.address}\n\nPayment verify hone ke baad process shuru ho jayega!`);
+                window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
+
+            } catch (err) {
+                alert("Kuch galat hua. Check your internet or contact support.");
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = "Place Order Now";
+            }
+        }
+    </script>
+</body>
+</html>
